@@ -1,0 +1,189 @@
+******************************************************************************************************************************************************************************************
+i)Create Example Graph (Not Connected. Many Components)
+
+// ===== Reset 'papersDemo' domain & projection =====
+
+// 1) Drop existing projection (no error if missing)
+CALL gds.graph.drop('papersDemo', false);
+
+// 2) Remove only the mini-domain (keeps Person/FRIENDS_WITH intact)
+MATCH (n)
+WHERE n:Paper OR n:Author OR n:Venue
+DETACH DELETE n;
+
+// ===== Constraints (idempotent) =====
+CREATE CONSTRAINT paper_id  IF NOT EXISTS FOR (p:Paper)  REQUIRE p.paperId  IS UNIQUE;
+CREATE CONSTRAINT author_id IF NOT EXISTS FOR (a:Author) REQUIRE a.authorId IS UNIQUE;
+CREATE CONSTRAINT venue_id  IF NOT EXISTS FOR (v:Venue)  REQUIRE v.venueId  IS UNIQUE;
+
+// ===== Parameters (adjust sizes as needed) =====
+:param paperCount  => 2000;
+:param authorCount => 500;
+:param venueCount  => 30;
+
+// ===== Nodes =====
+// Papers
+UNWIND range(1, $paperCount) AS id
+CREATE (:Paper {paperId:id, title:'Paper ' + toString(id), year:2000 + (id % 20)});
+
+// Authors
+UNWIND range(1, $authorCount) AS id
+CREATE (:Author {authorId:id, name:'Author ' + toString(id)});
+
+// Venues
+UNWIND range(1, $venueCount) AS id
+CREATE (:Venue {venueId:id, name:'Venue ' + toString(id)});
+
+// ===== Relationships (deterministic, no cartesian products) =====
+// PUBLISHED_IN: each paper -> one venue (round-robin)
+MATCH (p:Paper)
+WITH p, ((p.paperId - 1) % $venueCount) + 1 AS vid
+MATCH (v:Venue {venueId: vid})
+CREATE (p)-[:PUBLISHED_IN]->(v);
+
+// WROTE: each author -> up to 8 consecutive papers
+UNWIND range(1, $authorCount) AS aid
+MATCH (a:Author {authorId: aid})
+UNWIND range((aid - 1) * 8 + 1, (aid - 1) * 8 + 8) AS pid
+WITH a, pid
+WHERE pid <= $paperCount
+MATCH (p:Paper {paperId: pid})
+CREATE (a)-[:WROTE]->(p);
+
+// CITES: paper i cites i-1, i-2, i-3 (when available)
+UNWIND range(4, $paperCount) AS id
+MATCH (p:Paper {paperId: id})
+MATCH (p1:Paper {paperId: id-1})
+MATCH (p2:Paper {paperId: id-2})
+MATCH (p3:Paper {paperId: id-3})
+CREATE (p)-[:CITES]->(p1)
+CREATE (p)-[:CITES]->(p2)
+CREATE (p)-[:CITES]->(p3);
+
+// ===== Project the graph (fresh) =====
+CALL gds.graph.project(
+  'papersDemo',
+  ['Paper','Author','Venue'],
+  {
+    WROTE:        { orientation:'UNDIRECTED' },
+    CITES:        { orientation:'UNDIRECTED' },
+    PUBLISHED_IN: { orientation:'UNDIRECTED' }
+  }
+);
+
+YIELD graphName, nodeCount, relationshipCount
+RETURN graphName, nodeCount, relationshipCount;
+
+******************************************************************************************************************************************************************************************
+ii)Create Example Graph (1 Connected Components)
+
+// Clean prior projection and mini-domain (doesn't touch anything else you might have)
+CALL gds.graph.drop('papersDemo', false);
+
+MATCH (n)
+WHERE n:Paper OR n:Author OR n:Venue
+DETACH DELETE n;
+
+// Constraints (idempotent)
+CREATE CONSTRAINT paper_id  IF NOT EXISTS FOR (p:Paper)  REQUIRE p.paperId  IS UNIQUE;
+CREATE CONSTRAINT author_id IF NOT EXISTS FOR (a:Author) REQUIRE a.authorId IS UNIQUE;
+CREATE CONSTRAINT venue_id  IF NOT EXISTS FOR (v:Venue)  REQUIRE v.venueId  IS UNIQUE;
+
+// Parameters
+:param paperCount  => 2000;
+:param authorCount => 500;
+:param venueCount  => 30;
+
+// Nodes
+UNWIND range(1, $paperCount) AS id
+CREATE (:Paper {paperId:id, title:'Paper ' + toString(id), year:2000 + (id % 20)});
+
+UNWIND range(1, $authorCount) AS id
+CREATE (:Author {authorId:id, name:'Author ' + toString(id)});
+
+UNWIND range(1, $venueCount) AS id
+CREATE (:Venue {venueId:id, name:'Venue ' + toString(id)});
+
+// Relationships
+
+// PUBLISHED_IN: each paper -> one venue (round-robin)  ==> 2000 rels
+MATCH (p:Paper)
+WITH p, ((p.paperId - 1) % $venueCount) + 1 AS vid
+MATCH (v:Venue {venueId: vid})
+CREATE (p)-[:PUBLISHED_IN]->(v);
+
+// WROTE: distribute evenly so EVERY author has degree >= 1
+// 2000 papers, 500 authors -> 4 papers per author exactly  ==> 2000 rels
+UNWIND range(1, $paperCount) AS pid
+WITH pid, ((pid - 1) % $authorCount) + 1 AS aid
+MATCH (p:Paper {paperId: pid})
+MATCH (a:Author {authorId: aid})
+CREATE (a)-[:WROTE]->(p);
+
+// CITES: paper i cites i-1, i-2, i-3 (when available)  ==> 5,991 rels
+UNWIND range(4, $paperCount) AS id
+MATCH (p:Paper {paperId: id})
+MATCH (p1:Paper {paperId: id-1})
+MATCH (p2:Paper {paperId: id-2})
+MATCH (p3:Paper {paperId: id-3})
+CREATE (p)-[:CITES]->(p1)
+CREATE (p)-[:CITES]->(p2)
+CREATE (p)-[:CITES]->(p3);
+
+// Quick sanity checks: counts should be 2530 nodes, 9991 rels
+MATCH (n) RETURN count(n) AS nodes;
+MATCH ()-[r]->() RETURN count(r) AS rels;
+
+// Project UNDIRECTED for embeddings
+CALL gds.graph.project(
+  'papersDemo',
+  ['Paper','Author','Venue'],
+  {
+    WROTE:        { orientation:'UNDIRECTED' },
+    CITES:        { orientation:'UNDIRECTED' },
+    PUBLISHED_IN: { orientation:'UNDIRECTED' }
+  }
+)
+YIELD graphName, nodeCount, relationshipCount
+RETURN graphName, nodeCount, relationshipCount;
+
+
+
+******************************************************************************************************************************************************************************************
+iii) Create train projected graph with 90% of total edges (Note: Neo4j treats undirected edges as pairs of opposite direction edges)
+
+CALL gds.graph.drop('trainGraph', false);
+
+CALL gds.graph.project.cypher(
+  'trainGraph',
+  // Nodes
+  'MATCH (n) RETURN id(n) AS id',
+  // Relationships: exact-size random sample of undirected pairs, then both directions
+  "
+  // 1) build undirected pairs
+  MATCH (a)-[r]-(b)
+  WITH
+    CASE WHEN id(a) < id(b) THEN id(a) ELSE id(b) END AS s,
+    CASE WHEN id(a) < id(b) THEN id(b) ELSE id(a) END AS t,
+    type(r) AS type
+  WITH collect(DISTINCT [s,t,type]) AS pairs
+
+  // 2) choose exactly K = ceil(0.9 * M) pairs (random order)
+  WITH pairs, toInteger(ceil(size(pairs) * 0.9)) AS k
+  UNWIND pairs AS p
+  WITH p, k ORDER BY rand()
+  WITH k, collect(p)[..k] AS keep   // include k as grouping key
+
+  // 3) emit both directions
+  UNWIND keep AS p
+  UNWIND [[p[0],p[1]],[p[1],p[0]]] AS dir
+  RETURN dir[0] AS source, dir[1] AS target, p[2] AS type
+  "
+)
+YIELD graphName, nodeCount, relationshipCount;
+******************************************************************************************************************************************************************************************
+
+iv) Check connectivity
+CALL gds.wcc.stream('papersDemo')
+YIELD componentId
+RETURN count(DISTINCT componentId) AS components, (count(DISTINCT componentId) = 1) AS isConnected;
