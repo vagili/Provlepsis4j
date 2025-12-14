@@ -51,7 +51,7 @@ and executing each Cypher query on both so differences are explicit. Users can a
 ## System overview
 
 <p align="center">
-  <img src="assets/architecture.png" alt="Provlepsis4j architecture" width="900" />
+  <img src="assets/architecture.pdf" alt="Provlepsis4j architecture" width="900" />
 </p>
 
 At a high level:
