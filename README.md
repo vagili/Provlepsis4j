@@ -201,13 +201,13 @@ LIMIT 25
 ## Repository layout
 
 ```
-Provlepsis4j/
-  backend-py/          # FastAPI backend (Neo4j + GDS integration)
-  frontend/            # React (Vite) UI (served via nginx in Docker)
-  assets/              # README images (architecture + UI screenshots)
-  paper/               # Demo paper PDF
-  docker-compose.yml
-```
+## Repository layout
+
+- `backend-py/` — backend
+- `frontend/` — UI
+- `assets/` — figures
+- `docker-compose.yml` — demo deployment
+
 
 ---
 
