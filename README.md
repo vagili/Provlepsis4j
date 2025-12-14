@@ -242,7 +242,7 @@ LIMIT 25
 ---
 ## Citation
 
-If you use Provlepsis4j in academic work, please cite our demo paper (PDF/link will be added to this repository).
+If you use Provlepsis4j, please cite our demo paper (PDF/link will be added to this repository).
 
 BibTeX (venue and details will be updated upon acceptance):
 
