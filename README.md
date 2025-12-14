@@ -201,13 +201,11 @@ LIMIT 25
 ## Repository layout
 
 ```
-## Repository layout
-
 - `backend-py/` — backend
 - `frontend/` — UI
 - `assets/` — figures
 - `docker-compose.yml` — demo deployment
-
+```
 
 ---
 
