@@ -16,6 +16,8 @@
   ![React](https://img.shields.io/badge/React-Vite-61DAFB)
   ![Neo4j](https://img.shields.io/badge/Neo4j-5.x-brightgreen)
   ![Docker](https://img.shields.io/badge/Docker-compose-2496ED)
+  <!--[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.XXXXXXX.svg)](https://doi.org/10.5281/zenodo.XXXXXXX)-->
+
 </div>
 
 ---
