@@ -251,7 +251,7 @@ BibTeX (venue and details will be updated upon acceptance):
   author = {Iliadis, Evangelos and Gkartzios, Christos and Pitoura, Evaggelia},
   note   = {Demo paper. BibTeX entry will be updated with venue/year upon acceptance.}
 }
-
+```
 
 ---
 
