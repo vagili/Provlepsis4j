@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="frontend/public/Provlepsis.png" alt="Provlepsis4j" width="280" />
+  <img src="assets/Provlepsis_logo.png" alt="Provlepsis4j" width="300" />
 
   # Provlepsis4j
 
