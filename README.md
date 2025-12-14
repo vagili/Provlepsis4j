@@ -34,7 +34,7 @@ Provlepsis4j addresses this by connecting to a Neo4j instance and maintaining:
 and executing each Cypher query on both so differences are explicit. Users can also extend the predicted future graph over multiple rounds and inspect how answers change as predicted edges are added.
 
 <p align="center">
-  <img src="assets/user_view.png" alt="User view (current vs predicted)" width="900" />
+  <img src="assets/user_view.png" alt="User view (current vs predicted)" width="700" />
 </p>
 
 ### Two views
@@ -43,7 +43,7 @@ and executing each Cypher query on both so differences are explicit. Users can a
 - **User view**: write a Cypher query once and see answers on both graphs side by side (table + interactive visualization), including predicted edges annotated by prediction round.
 
 <p align="center">
-  <img src="assets/admin_view.png" alt="Administrator view (metrics + overlaps)" width="900" />
+  <img src="assets/admin_view.png" alt="Administrator view (metrics + overlaps)" width="700" />
 </p>
 
 ---
@@ -51,7 +51,7 @@ and executing each Cypher query on both so differences are explicit. Users can a
 ## System overview
 
 <p align="center">
-  <img src="assets/architecture.png" alt="Provlepsis4j architecture" width="900" />
+  <img src="assets/architecture.png" alt="Provlepsis4j architecture" width="700" />
 </p>
 
 At a high level:
