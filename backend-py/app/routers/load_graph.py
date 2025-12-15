@@ -479,6 +479,45 @@ async def load_graph(
             df_e["_timestamp"] = 0.0
 
 
+        # ------------------------------------------------------------------
+        # Collapse duplicate / parallel / anti-parallel edges
+        #   - pick a canonical direction per unordered pair
+        #   - collapse duplicates per (src,dst,type) after canonicalization
+        # ------------------------------------------------------------------
+
+        # drop rows with missing endpoints
+        before_rows = len(df_e)
+        df_e = df_e.dropna(subset=[src_col, dst_col]).copy()
+
+        # choose canonical direction:
+        # if both endpoints are numeric-ish -> compare numerically
+        # else compare as strings
+        a = df_e[src_col]
+        b = df_e[dst_col]
+
+        a_num = pd.to_numeric(a, errors="coerce")
+        b_num = pd.to_numeric(b, errors="coerce")
+        both_num = a_num.notna() & b_num.notna()
+
+        a_str = a.astype(str)
+        b_str = b.astype(str)
+
+        swap = (both_num & (a_num > b_num)) | ((~both_num) & (a_str > b_str))
+
+        # swap endpoints where needed (so src <= dst in the chosen ordering)
+        df_e.loc[swap, [src_col, dst_col]] = df_e.loc[swap, [dst_col, src_col]].values
+
+        if isTemporal and tcol_resolved and tcol_resolved in df_e.columns:
+            # we already copied it into df_e["_timestamp"]
+            df_e = df_e.drop(columns=[tcol_resolved])
+
+        agg = {c: "last" for c in df_e.columns if c not in {src_col, dst_col, type_col, "_type"}}
+        agg["_timestamp"] = "max" if isTemporal else "last"
+
+        df_e = df_e.groupby([src_col, dst_col, "_type"], as_index=False).agg(agg)
+
+        deduped_rows = len(df_e)
+        
         ids = pd.unique(
             pd.concat([df_e[src_col], df_e[dst_col]], ignore_index=True).dropna()
         )
@@ -565,3 +604,4 @@ async def load_graph(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Load failed: {e}")
+
